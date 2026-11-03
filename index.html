@@ -26,9 +26,11 @@
       .then((r) => r.json())
       .then(({ url }) => {
         if (!/^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/.test(url)) throw new Error();
-        document.getElementById("go").href = url;
+        // Передаём дальше приглашение и путь внутри Штаба, например #/invite/…
+        const target = url + "/" + (/^#\/[a-z0-9/-]*$/i.test(location.hash) ? location.hash : "");
+        document.getElementById("go").href = target;
         document.getElementById("go").hidden = false;
-        location.replace(url);
+        location.replace(target);
       })
       .catch(() => {
         document.getElementById("status").textContent = "Штаб сейчас недоступен. Похоже, компьютер выключен или перезагружается.";
