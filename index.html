@@ -4,14 +4,21 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#14614F">
   <title>Штаб</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <meta name="apple-mobile-web-app-title" content="Штаб">
   <style>
     :root { color-scheme: light; }
     body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 16px; box-sizing: border-box;
       background: #EEF0EA; color: #1A1D1C; font: 16px/1.4 system-ui, sans-serif; text-align: center; }
+    main { max-width: 420px; }
     h1 { margin: 0 0 8px; font-size: 32px; }
     p { margin: 0 0 16px; color: #4C5450; }
     a { display: inline-block; background: #14614F; color: #F8F9F5; padding: 12px 20px; border-radius: 6px; text-decoration: none; }
+    small { display: block; margin-top: 24px; color: #6B736F; }
   </style>
 </head>
 <body>
@@ -19,22 +26,41 @@
     <h1>Штаб</h1>
     <p id="status">Открываем…</p>
     <a id="go" href="#" hidden>Открыть Штаб</a>
+    <small>Добавьте эту страницу на экран телефона: значок всегда откроет Штаб, даже когда адрес сменится.</small>
   </main>
   <script>
-    // Адрес туннеля меняется при перезапуске компьютера, поэтому читаем его свежим, мимо кэша
-    fetch("address.json?t=" + Date.now(), { cache: "no-store" })
-      .then((r) => r.json())
-      .then(({ url }) => {
-        if (!/^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/.test(url)) throw new Error();
-        // Передаём дальше приглашение и путь внутри Штаба, например #/invite/…
-        const target = url + "/" + (/^#\/[a-z0-9/-]*$/i.test(location.hash) ? location.hash : "");
-        document.getElementById("go").href = target;
-        document.getElementById("go").hidden = false;
+    // Адрес туннеля меняется при перезапуске компьютера. Читаем его свежим и проверяем,
+    // что Штаб по нему отвечает; если компьютер как раз переезжает на новый адрес — ждём.
+    const status = document.getElementById("status");
+    const go = document.getElementById("go");
+    const hash = /^#\/[a-z0-9/?=&-]*$/i.test(location.hash) ? location.hash : "";
+    let tries = 0;
+
+    async function open() {
+      tries++;
+      try {
+        const { url } = await fetch("address.json?t=" + Date.now(), { cache: "no-store" }).then((r) => r.json());
+        if (!/^https:\/\/[a-z0-9.-]+\.(trycloudflare\.com|ngrok-free\.app|ngrok\.app|ts\.net)$/.test(url)) throw new Error("bad");
+        const target = url + "/" + hash;
+        go.href = target;
+        go.hidden = false;
+        // Проверяем, жив ли адрес (картинка грузится и с другого сайта)
+        await new Promise((ok, fail) => {
+          const img = new Image();
+          const t = setTimeout(fail, 8000);
+          img.onload = () => { clearTimeout(t); ok(); };
+          img.onerror = () => { clearTimeout(t); fail(); };
+          img.src = url + "/icon-192.png?t=" + Date.now();
+        });
         location.replace(target);
-      })
-      .catch(() => {
-        document.getElementById("status").textContent = "Штаб сейчас недоступен. Похоже, компьютер выключен или перезагружается.";
-      });
+      } catch {
+        status.textContent = tries < 18
+          ? "Штаб переезжает на новый адрес, подождите минуту…"
+          : "Штаб сейчас недоступен: похоже, компьютер выключен. Попробуйте позже.";
+        if (tries < 18) setTimeout(open, 10000);
+      }
+    }
+    open();
   </script>
 </body>
 </html>
