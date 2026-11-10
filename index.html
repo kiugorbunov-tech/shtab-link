@@ -40,7 +40,7 @@
       tries++;
       try {
         const { url } = await fetch("address.json?t=" + Date.now(), { cache: "no-store" }).then((r) => r.json());
-        if (!/^https:\/\/[a-z0-9.-]+\.(trycloudflare\.com|ngrok-free\.app|ngrok\.app|ts\.net)$/.test(url)) throw new Error("bad");
+        if (url !== "https://shtab.tehsvodengineering.ru" && !/^https:\/\/[a-z0-9.-]+\.(trycloudflare\.com|ngrok-free\.app|ngrok\.app|ts\.net)$/.test(url)) throw new Error("bad");
         const target = url + "/" + hash;
         go.href = target;
         go.hidden = false;
