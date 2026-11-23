@@ -29,8 +29,7 @@
     <small>Значок на экран телефона добавляйте со страницы самого Штаба — shtab.tehsvodengineering.ru, а не с этой: иначе вход будет слетать.</small>
   </main>
   <script>
-    // Адрес туннеля меняется при перезапуске компьютера. Читаем его свежим и проверяем,
-    // что Штаб по нему отвечает; если компьютер как раз переезжает на новый адрес — ждём.
+    // Штатная задача публикует текущий адрес в address.json.
     const status = document.getElementById("status");
     const go = document.getElementById("go");
     const hash = /^#\/[a-z0-9/?=&-]*$/i.test(location.hash) ? location.hash : "";
@@ -39,24 +38,18 @@
     async function open() {
       tries++;
       try {
-        const { url } = await fetch("address.json?t=" + Date.now(), { cache: "no-store" }).then((r) => r.json());
+        const response = await fetch("address.json?t=" + Date.now(), { cache: "no-store" });
+        if (!response.ok) throw new Error("address unavailable");
+        const { url } = await response.json();
         if (url !== "https://shtab.tehsvodengineering.ru" && !/^https:\/\/[a-z0-9.-]+\.(trycloudflare\.com|ngrok-free\.app|ngrok\.app|ts\.net)$/.test(url)) throw new Error("bad");
         const target = url + "/" + hash;
         go.href = target;
         go.hidden = false;
-        // Проверяем, жив ли адрес (картинка грузится и с другого сайта)
-        await new Promise((ok, fail) => {
-          const img = new Image();
-          const t = setTimeout(fail, 8000);
-          img.onload = () => { clearTimeout(t); ok(); };
-          img.onerror = () => { clearTimeout(t); fail(); };
-          img.src = url + "/icon-192.png?t=" + Date.now();
-        });
         location.replace(target);
       } catch {
         status.textContent = tries < 18
           ? "Штаб переезжает на новый адрес, подождите минуту…"
-          : "Штаб сейчас недоступен: похоже, компьютер выключен. Попробуйте позже.";
+          : "Не удалось получить адрес Штаба. Обновите страницу или попробуйте позже.";
         if (tries < 18) setTimeout(open, 10000);
       }
     }
